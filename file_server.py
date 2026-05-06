@@ -51,7 +51,12 @@ def main():
         print(f"🌐 http://localhost:{PORT}")
         print("   Ctrl+C to stop.\n")
 
-        signal.signal(signal.SIGINT, lambda *_: (print("\n👋 Stopping..."), httpd.shutdown()))
+        def shutdown(sig, frame):
+            signal.signal(signal.SIGINT, signal.SIG_DFL)
+            print("\n👋 Stopping...")
+            httpd.shutdown()
+
+        signal.signal(signal.SIGINT, shutdown)
         httpd.serve_forever()
 
 
