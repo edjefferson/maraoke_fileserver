@@ -25,7 +25,17 @@ LOG_FILE = SCRIPT_DIR / "ftp_sync.log"
 def download_file(rel, dest):
     url = f"{MEDIA_BASE_URL}/{rel}"
     dest.parent.mkdir(parents=True, exist_ok=True)
-    urllib.request.urlretrieve(url, dest)
+    tmp = dest.with_suffix(dest.suffix + ".part")
+    for attempt in range(1, 4):
+        try:
+            urllib.request.urlretrieve(url, tmp)
+            tmp.rename(dest)
+            return
+        except Exception as e:
+            tmp.unlink(missing_ok=True)
+            if attempt == 3:
+                raise
+            print(f" (retry {attempt}/2)", end="", flush=True)
 
 
 def download_list(files, verbose):
@@ -77,6 +87,12 @@ def main():
         return
 
     LOCAL_UPLOADS.mkdir(parents=True, exist_ok=True)
+
+    stale = list(LOCAL_UPLOADS.rglob("*.part"))
+    if stale:
+        print(f"==> Cleaning up {len(stale)} stale .part file(s)...")
+        for p in stale:
+            p.unlink(missing_ok=True)
 
     if core:
         print(f"\n==> {len(core)} missing file(s) for All-tagged songs:")
